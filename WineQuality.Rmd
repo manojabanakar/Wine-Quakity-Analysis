@@ -1,0 +1,1149 @@
+---
+title: "Wine Quality Prediction"
+author: "Tanmay Ambegaokar, Bhumika Mallikarjun , Kundana Chowdary Cherukuri, Jagadeeshwar Kalyanapu"
+date: "`r Sys.Date()`"
+# date: ""
+output:
+  rmdformats::readthedown:
+    # code_folding: hide
+    # number_sections: false
+    # df_print: "kable"
+    # toc: yes
+    # toc_depth: 3
+    # toc_float: yes
+      toc_float: true
+      toc_depth: 3
+      number_sections: false
+      code_folding: hide
+      df_print: "kable"
+  # pdf_document:
+  #   toc: yes
+  #   toc_depth: '3'
+---
+
+
+```{r init, include=F}
+library(ezids)
+library(tidyverse) 
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+```
+
+
+```{r setup, include=FALSE}
+# some of common options (and the defaults) are: 
+# include=T, eval=T, echo=T, results='hide'/'asis'/'markup',..., collapse=F, warning=T, message=T, error=T, cache=T, fig.width=6, fig.height=4, fig.dim=c(6,4) #inches, fig.align='left'/'center','right', 
+# knitr::opts_chunk$set(warning = F, results = "markup", message = F)
+knitr::opts_chunk$set(warning = F, results = "hide", message = F)
+options(scientific=T, digits = 3) 
+```
+
+```{r basic, include=F}
+# use this function to conveniently load libraries and work smoothly with knitting
+# can add quietly=T option to the require() function
+loadPkg = function(pkg, character.only = FALSE) { 
+  if (!character.only) { pkg <- as.character(substitute(pkg)) }
+  pkg <- ifelse(!character.only, as.character(substitute(pkg)) , pkg)  
+  if (!require(pkg,character.only=T, quietly =T)) {  install.packages(substitute(pkg),dep=T); if(!require(pkg,character.only=T)) stop("Package not found") } 
+}
+loadPkg(knitr)
+
+# unload/detact package when done using it
+unloadPkg = function(pkg, character.only = FALSE) { 
+  if(!character.only) { pkg <- as.character(substitute(pkg)) } 
+  search_item <- paste("package", pkg,sep = ":") 
+  while(search_item %in% search()) { detach(search_item, unload = TRUE, character.only = TRUE) } 
+}
+```
+
+# WINE!!!
+
+Through this project we embark on an exhilarating journey through the world of wine, where we explore the delicate art of predicting wine quality. With each sip and swirl, we delve into the enchanting realm of data analysis and visualization, uncovering the hidden gems within the chemical attributes that define wine excellence. 
+
+----------------------------------------------------------------------------------------------
+
+## LOADING THE DATASETS
+```{r load, include=TRUE, results='asis'}
+
+wine=read.csv("winequalityN.csv")
+xkabledplyhead(wine)
+xkabledplytail(wine)
+#xkablesummary(wine)
+```
+
+
+
+We have succesfully loaded the dataset. We can see that there are **6497 observations and 13 variables.** 
+
+Next lets look at the summary statistics. 
+
+----------------------------------------------------------------------------------------------
+
+## SUMMARY STATISTICS
+```{r summary, results='asis'}
+xkablesummary(wine)
+```
+
+A quick look at the summary tells us the inter-quartile ranges and maximum and minimum values for each variable.
+
+
+**Observations:**
+
+1. There are also some NA values which we need to remove.
+
+2. There might be duplicates in the dataset.
+
+----------------------------------------------------------------------------------------------
+
+## CLEANING THE DATA
+
+**Removing Duplicates**
+```{r cleanduplicates, include=TRUE, results='asis'}
+wine <- unique(wine)
+xkablesummary(wine)
+```
+
+Duplicates can cause issues later with biases. Thus, we have removed the duplicate values.
+
+Now, the dataset has 5329 observations.
+
+**Removing NA Values**
+```{r removeNA, include=TRUE, results='asis'}
+wine <- na.omit(wine)
+# str(wine)
+xkablesummary(wine)
+```
+
+
+After, removing the NAs, we are finally left with 5295 observations. The dataset is now clean.
+
+Now, the data is clean. We have removed the NAs, and duplicates. We can now start our exploratory data analysis. 
+
+**Observations:**
+
+1. There is a big difference between maximum value and Q3 values. This means that there are a quite a     lot of outliers.
+
+Let's visualize this using plots.
+
+----------------------------------------------------------------------------------------------
+
+## UNIVARIATE PLOTS
+
+To understand in depth as to which factor effects the quality the most.
+
+Let's look at the individual variables in the data set.
+
+```{r quality , include=TRUE, results='asis'}
+ggplot(data = wine, aes(x = quality)) +
+  geom_bar(width = 0.8, color = 'black', fill = I('yellow')) +
+  labs(
+    title = "Overall Wine Quality",
+    x = "Quality",
+    y = "Data - Red & white wine"
+  )
+```
+
+**Observations:**
+
+1. Wine quality shows a rather symmetrical distribution. 
+
+2. Most wines have a quality score of 6. 
+
+3. No wine achieved the highest score of 10 and the worst wines got a rating of 3. 
+
+Let's see how the other factors are effecting!
+
+```{r univariate1, include=TRUE, results='asis'}
+p1 <- ggplot(data = wine, aes(x = citric.acid)) +
+  geom_bar(fill = I('blue')) +
+  labs(
+    title = "Citric Acidity",
+    x = "Concentration [g/L]",
+    y = "Data"
+  )
+
+p2 <- ggplot(data = wine, aes(x = pH)) +
+  geom_bar( fill = I('blue')) +
+  labs(
+    title = "pH",
+    x = "pH",
+    y = "Data"
+  )
+p3 <- ggplot(data = wine, aes(x = residual.sugar)) +
+  geom_histogram(binwidth = 1,  fill = I('blue')) +
+  labs(
+    title = "Residual Sugar",
+    x = "Residual Sugar (g/L)",
+    y = "Data"
+  )
+p4 <- ggplot(data = wine, aes(x = density)) +
+  geom_histogram(binwidth = 0.002,  fill = I('blue')) +
+  labs(
+    title = "Density",
+    x = "Density",
+    y = "Data"
+  )
+p5 <- ggplot(data = wine, aes(x = chlorides)) +
+  geom_histogram(binwidth = 0.005,  fill = I('blue')) +
+  labs(
+    title = "Chlorides",
+    x = "Chloride Content (g/L)",
+    y = "Data"
+  )
+p6 <-  ggplot(data = wine, aes(x = alcohol)) +
+  geom_histogram(binwidth = 1,  fill = I('blue')) +
+  labs(
+    title = "Alcohol Content",
+    x = "Alcohol Content (% by volume)",
+    y = "Data"
+  )
+grid.arrange(p1,p2,p3,p4,p5,p6, nrow = 3)
+```
+
+
+```{r univariate2, include=TRUE, results='asis'}
+p7 <- ggplot(data = wine, aes(x = fixed.acidity)) +
+  geom_bar( fill = I('blue')) +
+  labs(
+    title = "Fixed Acidity",
+    x = "TaOH Concentration [g/L]",
+    y = "Data"
+  )
+
+ p8 <- ggplot(data = wine, aes(x = volatile.acidity)) +
+  geom_bar(  fill = I('blue')) +
+  labs(
+    title = "Volatile Acidity",
+    x = "AcOH Concentration [g/L]",
+    y = "Data"
+  )
+ 
+ p9 <- ggplot(wine, aes(x = free.sulfur.dioxide)) +
+  geom_histogram(binwidth = 5,  fill = I('blue')) +
+  labs(
+    title = "Free Sulfur Dioxide Concentration",
+    x = "Concentration (mg/L)",
+    y = "Data"
+  )
+
+ p10 <- ggplot(wine, aes(x = total.sulfur.dioxide)) +
+  geom_histogram(binwidth = 20, fill = "blue") +
+  labs(
+    title = "Total Sulfur Dioxide Concentration",
+    x = "Concentration (mg/L)",
+    y = "Data"
+  )
+
+grid.arrange(p7,p8, p9,p10, nrow = 2)
+
+```
+
+*Observations:*
+
+1) Most distributions encountered during the exploration of the parameters looked rather usual. In general, they were positively skewed with a narrow main peak.
+
+We will also have a look at at the box plots for these!
+
+```{r boxplots, include=TRUE, results='asis'}
+p1 <- ggplot(data = wine, aes(x = "", y = fixed.acidity )) +
+  geom_boxplot(color = 'black', fill = I('white')) +
+  labs(
+    x = "Fixed Acidity",
+    y = "TaOH Concentration [g/L]"
+  )
+
+p2 <- ggplot(data = wine, aes(x = "", y = volatile.acidity)) +
+  geom_boxplot(color = 'black', fill = I('white')) +
+  labs(
+    x = "Volatile Acidity",
+    y = "AcOH Concentration [g/L]"
+  )
+
+ p3 <- ggplot(data = wine, aes(x = "", y = citric.acid)) +
+  geom_boxplot(color = 'black', fill = I('white')) +
+  labs(
+    x = "Citric Acidity",
+    y = "Concentration [g/L]"
+  )
+
+ p4 <- ggplot(data = wine, aes(x = "", y = pH))+
+  geom_boxplot(color = 'black', fill = I('white')) +
+  labs(
+    x = "pH",
+    y = "pH"
+  )
+grid.arrange(p1,p2, p3,p4, nrow = 1)
+```
+
+
+**Observations:**
+
+1. Residual sugar has a very long-tail distribution with many outliers. It will be interesting to see how these outliers affect the quality of wine.
+
+2. Chlorides have distribution similar to residual sugar and have a strong concentration around the       median. We also note a lot of outliers from the box plot.
+
+3. Most wines have less than 11% alcohol.
+
+4. Density has a very normal looking distribution with most of the values falling between 0.995 and 1.
+
+----------------------------------------------------------------------------------------------
+
+## SUMMARY OF UNIVARIATE PLOTS
+1.  In general, the variables were positively skewed with a narrow main peak.
+
+2. Most wines have a pH of 3.2. Since we have chlorides,citric acid, and fixed and volatile acidity,      the wines were bound to be on the acidic side.
+
+3. The wines have an alcohol content ranging between 8 and 15 vol%.
+
+Now let us see that how different factors are related to the quality!
+
+----------------------------------------------------------------------------------------------
+
+## CORRELATION MATRIX
+
+First, we will build correlation matrix to identify the variables which influence quality the most. 
+```{r cor, results='asis'}
+
+numeric_data <- subset(wine, select = -c(type))
+redd <- subset(wine, type == "red")
+numeric_datared <- subset(redd, select = -c(type))
+whited <- subset(wine, type == "white")
+numeric_datawhite <- subset(whited, select = -c(type))
+loadPkg("corrplot")
+cor_matrix <-cor(numeric_data)
+corrplot(cor_matrix, method="circle",type="upper")
+numeric_data <- subset(wine, select = -c(type))
+
+```
+
+
+
+**Observations:**
+
+Our Target Variable is Quality, so we will focus on only those parameters which influence quality.
+
+1. Alcohol and quality have a high positive correlation.
+
+2. Density and quality have a negative correlation.
+
+3. Low correlation between quality and chloride concentration.
+
+4. Wine quality also slightly negatively correlates with volatile acidity.
+
+5. It has a slight positive correlation with citric acid.
+
+From the correlation matrix, let us now see how these parameters vary over different quality ratings for red and white wine separately and find out how they are different.
+
+----------------------------------------------------------------------------------------------
+
+## SUBSETTING DATA INTO RED AND WHITE WINEs
+
+```{r subsetting, include=TRUE, results='asis'}
+# Subset the dataset into red and white wines
+red <- wine[wine$type == "red", ]
+white <- wine[wine$type == "white", ]
+```
+
+We will now subset the data into white and red wine separately to go ahead with our analysis.
+
+----------------------------------------------------------------------------------------------
+
+## BIVARIATE PLOTS
+
+Through our correlation plot we have understood that Alcohol content, density, citric acid and chloride are the ones that are affecting the quality the most, let us see how and also make a comparitive analysis between red and white wine individually!
+
+
+## 1. ALCOHOL VS QUALITY
+```{r alcqual, results='asis'}
+library(ggplot2)
+ggplot(wine, aes(x = as.factor(quality), y = alcohol)) +
+  geom_boxplot(fill = "brown", color = "darkblue") +
+  labs(x = "Wine Quality", y = "Alcohol") +
+  ggtitle("Box Plot of Alcohol vs Quality")
+```
+
+
+
+The boxplot shows that wines with higher quality seem to have a higher alcohol content. 
+
+**T-Test**
+
+WELCH TWO SAMPLE T-TEST
+
+NULL HYPOTHESIS (H0): There is no significant mean difference between red and white wine in alcohol content.
+
+ALTERNATE HYPOTHESIS (H1): There is significant mean difference between the two wines.
+
+```{r alct,results='asis'}
+t_test_alcohol <- t.test(red$alcohol,white$alcohol, level=0.05)
+
+p <- t_test_alcohol$p.value
+```
+
+
+**Observations:**
+
+1. Since the p-value of `r p` is less than 0.05, we reject the null hypothesis and conclude that there is a significant difference in mean alcohol concentration between the two wines.
+
+
+Let us check how it varies for red and white wine.
+
+```{r colalc,results='asis'}
+library(ggplot2)
+red <- subset(wine, type == "red")
+white <- subset(wine, type == "white")
+ggplot() +
+  
+  geom_boxplot(data = red, aes(x = as.factor(quality), y = alcohol, fill = "red"), width = 0.4) +
+  labs(x = "Wine Quality", y = "Alcohol", fill = "Wine Color") +
+  ggtitle("Box Plot of Alcohol vs Quality for Red Wines") +
+  scale_fill_manual(values = c("red" = "red"))
+
+ggplot() +
+  geom_boxplot(data = white, aes(x = as.factor(quality), y = alcohol, fill = "white"), width = 0.4) +
+  labs(x = "Wine Quality", y = "Alcohol", fill = "Wine Color") +
+  ggtitle("Box Plot of Alcohol vs Quality for White Wines") +
+  scale_fill_manual(values = c("white" = "white"))
+```
+
+**Observations:**
+
+1. White Wines have higher alcohol content.
+
+2. Alcohol has a strong positive correlation with quality.
+
+
+**ANOVA TEST FOR RED WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean alcohol content across quality categories in red wine
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean alcohol content across quality categories in red wine
+```{r anovaredalc,results='asis'}
+anova_result <- aov(alcohol ~  as.factor(quality), data = red, conf.level = 0.95)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+summary(tukey_test)
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          alcohol content across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    alcohol level.
+
+**ANOVA TEST FOR WHITE WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean alcohol content across quality categories in white wine
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean alcohol content across quality categories in white wine
+
+```{r anovawhitealc,results='markup'}
+anova_result <- aov(alcohol ~  as.factor(quality), data = white)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          alcohol content across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    alcohol level.
+
+----------------------------------------------------------------------------------------------
+
+## 2. DENSITY VS QUALITY
+```{r density, results='asis'}
+library(ggplot2)
+# Density Distribution by Wine Quality
+ggplot(wine, aes(x = factor(quality), y = density)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(x = "Quality", y = "Density") +
+  ggtitle("Density Distribution by Wine Quality")+
+  ylim(0, 1.01)  # Adjust the limits as needed
+
+```
+
+The boxplot shows that wines with higher quality seem to have a less denser.
+
+**T-Test**
+
+WELCH TWO SAMPLE T-TEST
+
+NULL HYPOTHESIS (H0): There is no significant mean difference between red and white wine in density level.
+
+ALTERNATE HYPOTHESIS (H1): There is significant mean difference between the tw0 wines in density level.
+```{r densityt,results='asis'}
+t_test_density <- t.test(red$density,white$density, level=0.05)
+
+p <- t_test_density$p.value
+print(p)
+```
+
+
+**Observations:**
+
+1. Since the p-value of `r p` is less than 0.05, we reject the null hypothesis and conclude that there is a significant difference in mean densitylevel between the two wines.
+
+Let us check how it varies for red and white wine
+
+```{r denqual, results='asis'}
+# Box Plot of Density vs Quality for Red Wines
+ggplot() +
+  geom_boxplot(data = red, aes(x = as.factor(quality), y = density, fill = "light coral"), width = 0.4) +
+  labs(x = "Wine Quality", y = "Density", fill = "light coral") +
+  ggtitle("Box Plot of Density vs Quality for Red Wines") +
+  scale_fill_manual(values = c("light coral" = "light coral"))
+
+# Box Plot of Density vs Quality for White Wines
+ggplot() +
+  geom_boxplot(data = white, aes(x = as.factor(quality), y = density, fill = "red"), width = 0.4) +
+  labs(x = "Wine Quality", y = "Density", fill = "red") +
+  ggtitle("Box Plot of Density vs Quality for White Wines") +
+  scale_fill_manual(values = c("red" = "red"))
+```
+
+
+**Observations:**
+
+1. Red Wines are more dense than white wines.
+
+2. Density has a negative correlation with quality.
+
+
+
+**ANOVA TEST FOR RED WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean density level across quality categories in red wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean density level across quality categories in red wine.
+
+```{r anovaredden,results='markup'}
+anova_result <- aov(density ~  as.factor(quality), data = red, conf.level = 0.95)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          density across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    density level.
+
+**ANOVA TEST FOR WHITE WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean density level across quality categories in white wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean density level across quality categories in white wine.
+
+```{r anovawhiteden,results='asis'}
+anova_result <- aov(density ~  as.factor(quality), data = white)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          density level across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    density level.
+
+----------------------------------------------------------------------------------------------
+
+## 3. CHLORIDES VS QUALITY
+```{r chlorides, results='asis'}
+ggplot(wine, aes(x = factor(quality), y = chlorides)) +
+  geom_boxplot(fill = "lightcoral") +
+  labs(x = "Quality", y = "Chlorides") +
+  ggtitle("Chloride Distribution by Wine Quality") +
+  ylim(0, 0.2)
+```
+
+The boxplot shows that wines with higher quality seem to have a less chlorides. 
+
+**T-Test**
+
+WELCH TWO SAMPLE T-TEST
+
+NULL HYPOTHESIS (H0): There is no significant mean difference between red and white wine in chloride concentration.
+
+ALTERNATE HYPOTHESIS (H1): There is significant mean difference between the tw0 wines in chloride concentration.
+```{r chloridet,results='asis'}
+t_test_chloride <- t.test(red$chlorides,white$chlorides, level=0.05)
+
+p <- t_test_chloride$p.value
+print(p)
+```
+
+
+**Observations:s**
+
+1. Since the p-value of `r p` is less than 0.05, we reject the null hypothesis and conclude that there is a significant difference in mean chloride concentration between the two wines.
+
+Let us check how it varies for red and white wine
+
+```{r chloralcohol, results='asis'}
+ggplot(red, aes(x = factor(quality), y = chlorides)) +
+  geom_boxplot(fill = "yellow") +
+  labs(x = "Quality", y = "Chlorides") +
+  ggtitle("Chloride Distribution by Wine Quality (Red Wine)") +
+  ylim(0, 0.3)
+
+ggplot(white, aes(x = factor(quality), y = chlorides)) +
+  geom_boxplot(fill = "coral") +
+  labs(x = "Quality", y = "Chlorides") +
+  ggtitle("Chloride Distribution by White Wine Quality") +
+  ylim(0, 0.2)
+
+
+```
+
+**Observations:**
+
+1. Red Wines have more chloride concentration than white wines.
+
+2. Chloride Concentration has a slight negative correlation with quality
+
+
+
+**ANOVA TEST FOR RED WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean chloride contentration across quality categories in red wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean chloride contentration across quality categories in red wine.
+
+```{r anovaredchloride,results='asis'}
+anova_result <- aov(chlorides ~  as.factor(quality), data = red, conf.level = 0.95)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+tukey_test
+```
+
+**Observations**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          chloride concentration across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant differnece in    chloride concentration.
+
+**ANOVA TEST FOR WHITE WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean chloride contentration across quality categories in white wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean chloride contentration across quality categories in white wine.
+
+```{r anovawhitechloride,results='asis'}
+anova_result <- aov(chlorides ~  as.factor(quality), data = white)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          chloride concentration across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    chloride concentration.
+
+----------------------------------------------------------------------------------------------
+
+## 4. CITRIC ACID VS QUALITY
+
+```{r citric, results='asis'}
+library(ggplot2)
+ggplot(wine, aes(x = factor(quality), y = citric.acid)) +
+  geom_boxplot(fill = "lightpink") +
+  labs(x = "Quality", y = "Citric Acid") +
+  ggtitle("Citric Acid Distribution by Wine Quality")+
+ ylim(0.0,0.15)
+```
+
+The boxplot shows that wines with higher quality seem to have a high citric acid.
+
+**T-Test**
+
+WELCH TWO SAMPLE T-TEST
+
+NULL HYPOTHESIS (H0): There is no significant mean difference between red and white wine in citric acid concentration.
+
+ALTERNATE HYPOTHESIS (H1): There is significant mean difference between the tw0 wines in citric acid concentration.
+```{r citrict,results='asis'}
+t_test_citric <- t.test(red$citric.acid,white$citric.acid, level=0.05)
+
+p <- t_test_citric$p.value
+print(p)
+```
+
+
+**Observations:**
+
+1. Since the p-value of `r p` is less than 0.05, we reject the null hypothesis and conclude that there is a significant difference in mean citric acid concentration between the two wines.
+
+Let us check how it varies for red and white wine
+
+```{r citricqual, results='asis'}
+ggplot(red, aes(x = factor(quality), y = citric.acid)) +
+  geom_boxplot(fill = "green") +
+  labs(x = "Quality", y = "Citric Acid") +
+  ggtitle("Citric Acid Distribution by Red Wine Quality")+
+  ylim(0.0,0.15)
+  
+  ggplot(white, aes(x = factor(quality), y = citric.acid)) +
+  geom_boxplot(fill = "maroon") +
+  labs(x = "Quality", y = "Citric Acid") +
+  ggtitle("Citric Acid Distribution by White Wine Quality")+
+  ylim(0.0,0.15)
+
+```
+
+
+
+**Observations:**
+
+1. White Wines have more citric acid concentration than red wines.
+
+2. Citric ACid Concentration has a slight positive correlation with quality.
+
+3. There isn't much difference in citric acid concentration in white wines across the quality ratings.
+
+
+
+**ANOVA TEST FOR RED WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean citric acid level across quality categories in red wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean citric acid level across quality categories in red wine.
+```{r anovaredCITRIC,results='asis'}
+anova_result <- aov(citric.acid ~  as.factor(quality), data = red, conf.level = 0.95)
+print(summary(anova_result))
+tukey_test <- TukeyHSD(anova_result)
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          citric acid across all categories of red wine.
+
+2. We also have done Tukey Test to check in which quality ratings, there is a significant difference in    citric acid level.
+
+**ANOVA TEST FOR WHITE WINE**
+
+NULL HYPOTHESIS (H0): There is no significant difference in mean citric acid level across quality categories in white wine.
+
+ALTERNATE HYPOTHESIS (H1): There is significant difference in mean citric acid level across quality categories in white wine.
+
+```{r anovawhitecitric,results='asis'}
+anova_result <- aov(citric.acid ~  as.factor(quality), data = white)
+print(summary(anova_result))
+
+tukey_test <- TukeyHSD(anova_result)
+
+tukey_test
+```
+
+**Observations:**
+
+1. From the ANOVA test, we can see that the P-vale is significantly less than 0.05. 
+   So, we reject the null hypothesis and conclude that there is a significant difference in mean          citric acid level across all categories of red wine.
+
+----------------------------------------------------------------------------------------------
+
+## CORRELATION FOR THE BI-VARIATE PLOTS.
+
+```{r ,results='asis'}
+
+library(corrplot)
+white <- na.omit(white[, c("citric.acid", "chlorides","density",  "alcohol")])
+
+red <- na.omit(red[, c("citric.acid", "chlorides","density", "alcohol")])
+
+correlation_matrix_white <- cor(white)
+correlation_matrix_red <- cor(red)
+
+combined_correlation_matrix <- (correlation_matrix_white + correlation_matrix_red) / 2
+
+corrplot(combined_correlation_matrix, method = "color", type = "upper", tl.col = "black", tl.srt = 45, addCoef.col = "red")
+
+```
+
+
+
+**Observations:**
+
+Data cleaning is performed on both white and red in the above code, deleting rows with missing values in certain columns.
+Correlation matrices are subsequently computed for the cleaned datasets.
+The correlation matrices from the white and red wine datasets are averaged in the combined correlation matrix.
+A correlation plot with a customized appearance is built.
+
+----------------------------------------------------------------------------------------------
+
+## SUMMARY OF BIVARIATE PLOTS
+
+From the bivariate plots, we have concluded that :
+
+1. For good quality wines, the alcohol content is more.
+
+2. As the density decreases, the quality gets better.
+
+3. As the chloride concentration decreases, quality gets better.
+
+4. For better wines, the citric acid concentration is more.
+
+5. Whites wines generally have less density and have more alcohol conent.
+
+----------------------------------------------------------------------------------------------
+
+## MULTIVARIATE PLOTS
+
+For the last part of our EDA, we will perform some multivariate plots to see some how the other non-important featues in wine are distributed in red and white wine.
+
+```{r multi, results='asis'}
+library(ggplot2)
+ggplot(wine, aes(x = residual.sugar, y = density, color = factor(type))) +
+  geom_point() +ggtitle("Scatter plot for Density vs Sugar ") +
+  labs(x = "Sugar", y = "Density", color = "Wine Type")
+
+ggplot(wine, aes(x = alcohol, y = density, color = factor(type))) +
+  geom_point() +  ggtitle("Scatter plot for Density vs Alcohol ") +
+  labs(x = "Alcohol", y = "Density", color = "Wine Type")
+
+
+
+
+ ggplot(wine, aes(x = alcohol, y = chlorides, color = factor(type))) +
+  geom_point() + ggtitle("Scatter plot for Chlorides vs Alcohol ") +
+  labs(x = "Alcohol", y = "Chlorides", color = "Wine Type")
+
+
+
+ggplot(wine, aes(x = sulphates, y = residual.sugar, color = factor(type))) +
+  geom_point() +ggtitle("Scatter plot for Sulphates vs Sugar ") +
+  labs(x = "Sulphates", y = "Residual Sugar", color = "Wine Type")
+
+```
+
+**Observations:**
+
+1. White Wines have more sugar concentration than red wines. This might explain why white wines are       usually more sweet.
+
+2. Red Wines have more sulphate concentration. 
+
+----------------------------------------------------------------------------------------------
+
+## LIMITATIONS
+
+Although we thoroughly believe in our analysis, we have to mention a few anomalies that are present that may or may not have influenced the results.
+
+1. The number of data that we have on white wine is comparatively more than that of red wine. 
+
+2. We have also observed that most of the data present are in the average quality range i.e, from 4-8.
+
+For a better analysis, we need a more balanced data.
+
+----------------------------------------------------------------------------------------------
+
+## CONCLUSIONS FROM EDA 
+
+In our preliminary analysis, we have uncovered some key insights:
+
+1. Wines with elevated alcohol content, increased citric acid levels, lower density, and reduced chlorides tend to exhibit higher quality.
+
+2. It appears that white wines, in general, tend to be sweeter and have higher alcohol content when compared to their red counterparts.
+
+With this new found knowledge, you're better equipped to make informed choices when selecting wines!!
+
+----------------------------------------------------------------------------------------------
+
+## MODELLING THE DATA
+
+From our EDA, we have identified some key features which influence the target variable- **Quality**.
+
+As part of our next analysis, we will now perform some regression models to see which model predicts the quality of wine with most accuracy.
+
+----------------------------------------------------------------------------------------------
+```{r}
+wine2<-wine
+```
+## 1. LINEAR REGRESSION
+
+```{r fs}
+loadPkg("leaps")
+reg.best2 <- regsubsets(quality~., data = numeric_data, nbest = 2, method = "exhaustive") 
+plot(reg.best2, scale = "adjr2", main = "Adjusted R^2")
+plot(reg.best2, scale = "r2", main = "R^2")
+plot(reg.best2, scale = "bic", main = "BIC")
+plot(reg.best2, scale = "Cp", main = "Cp")
+
+```
+```{r linear, results='markup'}
+model1 = lm(quality ~ volatile.acidity+residual.sugar+free.sulfur.dioxide+total.sulfur.dioxide+pH+sulphates+alcohol, data=numeric_data)
+sum_md1 = summary(model1) # also for later use on inline codes
+sum_md1
+
+predicted_values <- predict(model1, newdata = numeric_data)
+
+# Calculate residuals (the differences between predicted and actual values)
+residuals <- predicted_values - numeric_data$quality
+
+# Calculate Mean Squared Error (MSE)
+mse <- mean(residuals^2)
+print(sqrt(0.53))
+
+cat("MSE",mse,"\n")
+
+```
+
+----------------------------------------------------------------------------------------------
+
+## 2. LOGISTIC REGRESSION
+
+For Logistic Regression, we want the outcome variable to be categorical. Hence,w e are converting all the wines from **0 to 6** to "Bad Wines" and from **6-10** as "Good Wines".
+
+
+```{r category, results='asis'}
+wine <- wine %>%
+  mutate(quality_category = ifelse(quality < 6, 0, 1))
+head(wine)
+```
+
+```{r logit, results='markup'}
+winelogit1 <- glm(quality_category ~volatile.acidity+residual.sugar+pH+sulphates+alcohol+free.sulfur.dioxide+total.sulfur.dioxide, data = wine, binomial(link = "logit"))
+summary(winelogit1)
+exp(coef(winelogit1))
+```
+
+```{r confusionMatrix, results='asis'}
+loadPkg(regclass)
+conf_matrix = confusion_matrix(winelogit1)
+
+unloadPkg(regclass)
+```
+
+```{r confresults, results="asis"}
+xkabledply(conf_matrix,"Confusion Matrix: Logit model, cutoff = 0.6")
+
+```
+
+
+```{r roc, results='asis'}
+#install.packages("pROC")
+
+loadPkg(pROC) # receiver operating characteristic curve, gives the diagnostic ability of a binary classifier system as its discrimination threshold is varied. The curve is on sensitivity/recall/true-positive-rate vs false_alarm/false-positive-rate/fall-out.
+wine$prob=predict(winelogit1, type = c("response")) # Add new column of predicted probabilities
+h <- roc(quality_category~prob, data=wine)
+auc(h) # area-under-curve prefer 0.8 or higher.
+plot(h)
+#unloadPkg(pROC) 
+```
+
+```{r HosmerLemeshow, results='asis'}
+#### Hosmer and Lemeshow test  
+########The Hosmer and Lemeshow Goodness of Fit test can be used to evaluate logistic regression fit. 
+
+loadPkg(ResourceSelection) # function hoslem.test( ) for logit model evaluation
+winelogit1_Hoslem = hoslem.test(wine$quality_category, fitted(winelogit1)) # Hosmer and Lemeshow test, a chi-squared test
+unloadPkg(ResourceSelection) 
+winelogit1_Hoslem
+```
+
+```{r McFadden_direct, results='asis'}
+# We can try this just to confirm the following calculation
+wine_nulllogit1 <- glm(quality_category ~ 1, data = wine, family = "binomial")
+mcFadden = 1 - logLik(winelogit1)/logLik(wine_nulllogit1)
+mcFadden
+```
+
+
+
+```{r McFadden, results='markup'}
+loadPkg(pscl) # use pR2( ) function to calculate McFadden statistics for model eval
+wineLogit1pr2 = pR2(winelogit1)
+wineLogit1pr2
+unloadPkg(pscl) 
+```
+
+
+```{r accuracy, results='asis'}
+
+true_positives <- 2786
+true_negatives <- 1185
+false_positives <-794
+false_negatives <-530
+total <- 5295
+
+# Calculate accuracy
+accuracy <- (true_positives + true_negatives) / total
+cat("Accuracy of logistic regression model is", accuracy,"\n")
+
+precision <- true_positives / (true_positives + false_positives)
+cat(" Precision of logistic regression model is",  precision, "\n")
+```
+
+
+----------------------------------------------------------------------------------------------
+
+## 3. KNN 
+
+```{r knn, results='markup'}
+loadPkg("class")
+library(class)
+set.seed(123)
+
+sample_indices <- sample(1:nrow(wine), 0.7 * nrow(wine))
+
+train_data <- wine[sample_indices, ]
+test_data <- wine[-sample_indices, ]
+
+library(class)
+
+# Define predictors and response variable
+predictors <- names(wine)[2:13]  # Adjust column indices based on your data
+response <- "quality"
+train_data$quality_category <- as.factor(train_data$quality_category)
+
+
+k <- 5  # You can adjust the value of k
+knn_model <- knn(train = train_data[, predictors], test = test_data[, predictors], cl = train_data$quality_category, k = k)
+
+
+confusion_matrix <- table(Actual = test_data$quality_category, Predicted = knn_model)
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+precision <-confusion_matrix[2,2]/sum(diag(confusion_matrix))
+confusion_matrix
+
+# Display the confusion matrix and accuracy
+print(confusion_matrix)
+cat("Accuracy:", accuracy, "\n")
+cat("Precision :", precision, "\n")
+
+str(knn_model)
+length(knn_model)
+table(knn_model)
+
+library(caret)
+set.seed(123)
+cv <- trainControl(method = "cv", number = 10)
+model <- train(quality_category ~ ., data = train_data, method = "knn", trControl = cv)
+model
+```
+
+----------------------------------------------------------------------------------------------
+
+## 4. DECISION TREES OVERALL WINE QUALITY!
+
+----------------------------------------------------------------------------------------------
+```{r Decision Trees, results='markup'}
+library(rpart)
+set.seed(123) 
+trainIndex <- sample(nrow(wine), 0.9 * nrow(wine))
+trainData <- wine[trainIndex, ]
+testData <- wine[-trainIndex, ]
+
+tree_model <- rpart(quality ~ fixed.acidity + volatile.acidity + residual.sugar + free.sulfur.dioxide + density + pH + sulphates + alcohol, data = trainData)
+
+print(summary(tree_model))
+library(rpart.plot)
+rpart.plot(tree_model, digits = 4, extra = 1)
+```
+The root node splits the full dataset based on the alcohol content of the wines, with a split point of 10.6. Wines with alcohol < 10.6 go to the left branch and wines with alcohol >= 10.6 go to the right branch.
+The left branch then further splits on volatile acidity being < or >= 0.282. This results in two leaf nodes predicting quality scores of 5.30 and 5.72 for the low and high volatility acidity wines.
+The right branch splits again on alcohol content < or >= 11.7. The left sub-branch splits once more on volatile acidity to generate two leaf nodes predicting quality of 5.51 and 6.09.
+The right-most leaf node predicts a quality score of 6.49 for wines with the highest alcohol content >= 11.7.
+So in total it has generated 5 leaf nodes predicting quality scores ranging from 5.30 to 6.49 based on 3 split points on alcohol content and 1 split point on volatile acidity.
+
+ 
+
+----------------------------------------------------------------------------------------------
+
+## 5. LOOKING AT EACH WINE INDIVIDUALLY
+
+----------------------------------------------------------------------------------------------
+
+Preparing a training and testing for red and white wine!
+
+```{r}
+index <- sample(nrow(white), nrow(white)*0.90)
+white_train = white[index,]
+white_test = white[-index,]
+
+
+index <- sample(nrow(red), nrow(red)*0.90)
+red_train = red[index,]
+red_test = red[-index,]
+```
+
+# White wine Linear Model
+
+```{r}
+white_lm_reg <- lm(quality ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + chlorides + total.sulfur.dioxide + free.sulfur.dioxide + density + pH + sulphates + alcohol, data = white_train)
+summary(white_lm_reg)
+```
+Of the 11 predictors, 7 have statistically significant coefficients based on the t-tests (Pr(>|t|)):
+fixed acidity
+citric acid 
+residual sugar 
+free sulfur dioxide
+density
+pH
+sulphates
+alcohol
+Volatile acidity has by far the largest coefficient magnitude (-1.60), indicating it has a strong negative association with quality when holding other predictors constant.
+The model achieves an R-squared of 0.293, meaning the predictors explain 29.3% of the variance in wine quality.
+
+Rebuilding the model by removing all the non significant values:
+
+```{r}
+white_lm_reg <- lm(quality ~ fixed.acidity + citric.acid + residual.sugar + free.sulfur.dioxide + density + pH + sulphates + alcohol, data = white_train)
+summary(white_lm_reg)
+```
+
+----------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
